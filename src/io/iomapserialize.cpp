@@ -60,9 +60,12 @@ bool IOMapSerialize::saveHouseItems()
 
 	//Start the transaction
 	DBTransaction transaction;
-	if (!transaction.begin()) {
+	
+	if (!transaction.start()) {
 		return false;
 	}
+
+	DBTransactionGuard guard(transaction);
 
 	//clear old tile data
 	if (!db.executeQuery("DELETE FROM `tile_store`")) {
@@ -290,9 +293,11 @@ bool IOMapSerialize::saveHouseInfo()
 	Database& db = Database::getInstance();
 
 	DBTransaction transaction;
-	if (!transaction.begin()) {
+	if (!transaction.start()) {
 		return false;
 	}
+
+	DBTransactionGuard guard(transaction);
 
 	if (!db.executeQuery("DELETE FROM `house_lists`")) {
 		return false;
