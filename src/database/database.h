@@ -252,7 +252,7 @@ class DBTransaction
 			} catch (const std::exception &exception) {
 				// An error occurred while rollback the transaction
 				SPDLOG_ERROR("An error occurred while rollback the transaction");
-				throw exception;
+				throw;
 			}
 		}
 
