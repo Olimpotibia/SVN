@@ -288,6 +288,14 @@ class DBTransactionGuard
 	public:
 		explicit DBTransactionGuard(DBTransaction& transaction) : transaction_(transaction) {}
 
+		// non-copyable
+        DBTransactionGuard(const DBTransactionGuard&) = delete;
+        DBTransactionGuard& operator=(const DBTransactionGuard&) = delete;
+
+        // non-movable
+        DBTransactionGuard(DBTransactionGuard&&) = delete;
+        DBTransactionGuard& operator=(DBTransactionGuard&&) = delete;
+
 		~DBTransactionGuard() {
 			// Commit the transaction if it was started successfully
 			if (transaction_.isStarted()) {
@@ -296,13 +304,10 @@ class DBTransactionGuard
 				} catch (const std::exception &exception) {
 					// Error occurred while committing transaction
 					SPDLOG_ERROR("Error occurred while committing transaction");
+					transaction_.rollback();
 				}
 			}
 		}
-
-		// non-copyable
-		DBTransactionGuard(const DBTransactionGuard&) = delete;
-		DBTransactionGuard& operator=(const DBTransactionGuard&) = delete;
 
 		void rollback() {
 			transaction_.rollback();
