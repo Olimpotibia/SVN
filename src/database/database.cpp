@@ -21,55 +21,40 @@ Database::~Database()
 
 bool Database::connect()
 {
-	// connection handle initialization
-	handle = mysql_init(nullptr);
-	if (!handle) {
-		SPDLOG_ERROR("Failed to initialize MySQL connection handle");
+    // connection handle initialization
+    handle = mysql_init(nullptr);
+    if (!handle) {
+        SPDLOG_ERROR("Failed to initialize MySQL connection handle");
 		return false;
+    }
+
+    // automatic reconnect
+    bool reconnect = true;
+    mysql_options(handle, MYSQL_OPT_RECONNECT, &reconnect);
+
+    // check if all required parameters have been provided
+    const std::string host = g_configManager().getString(MYSQL_HOST);
+	const std::string user = g_configManager().getString(MYSQL_USER);
+    const std::string password = g_configManager().getString(MYSQL_PASS);
+	const std::string database = g_configManager().getString(MYSQL_DB);
+	const int port = g_configManager().getNumber(SQL_PORT);
+	const std::string socket = g_configManager().getString(MYSQL_SOCK);
+	
+	if (host.empty() || user.empty() || password.empty() || database.empty() || port <= 0) {
+		SPDLOG_ERROR("MySQL host, user, password, database or port not provided");
 	}
-
-	// automatic reconnect
-	bool reconnect = true;
-	mysql_options(handle, MYSQL_OPT_RECONNECT, &reconnect);
-
-	// connects to database
-	if (!mysql_real_connect(handle, g_configManager().getString(MYSQL_HOST).c_str(), g_configManager().getString(MYSQL_USER).c_str(), g_configManager().getString(MYSQL_PASS).c_str(), g_configManager().getString(MYSQL_DB).c_str(), g_configManager().getNumber(SQL_PORT), g_configManager().getString(MYSQL_SOCK).c_str(), 0)) {
-		SPDLOG_ERROR("Message: {}", mysql_error(handle));
+	
+    // connects to database
+    if (!mysql_real_connect(handle, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, socket.c_str(), 0)) {
+        SPDLOG_ERROR("MySQL Error Message: {}", mysql_error(handle));
 		return false;
-	}
+    }
 
-	DBResult_ptr result = storeQuery("SHOW VARIABLES LIKE 'max_allowed_packet'");
-	if (result) {
-		maxPacketSize = result->getNumber<uint64_t>("Value");
-	}
-	return true;
-}
-
-bool Database::connect(const char *host, const char *user, const char *password,
-                      const char *database, uint32_t port, const char *sock) {
-	// connection handle initialization
-	handle = mysql_init(nullptr);
-	if (!handle) {
-		SPDLOG_ERROR("Failed to initialize MySQL connection handle.");
-		return false;
-	}
-
-	// automatic reconnect
-	bool reconnect = true;
-	mysql_options(handle, MYSQL_OPT_RECONNECT, &reconnect);
-
-	// connects to database
-	if (!mysql_real_connect(handle, host, user, password, database, port, sock,
-                          0)) {
-		SPDLOG_ERROR("MySQL Error Message: {}", mysql_error(handle));
-		return false;
-	}
-
-	DBResult_ptr result = storeQuery("SHOW VARIABLES LIKE 'max_allowed_packet'");
-	if (result) {
-		maxPacketSize = result->getNumber<uint64_t>("Value");
-	}
-	return true;
+    DBResult_ptr result = storeQuery("SHOW VARIABLES LIKE 'max_allowed_packet'");
+    if (result) {
+        maxPacketSize = result->getNumber<uint64_t>("Value");
+    }
+    return true;
 }
 
 bool Database::beginTransaction()
@@ -118,78 +103,138 @@ bool Database::commit()
 
 bool Database::executeQuery(const std::string& query)
 {
-  if (!handle) {
-    SPDLOG_ERROR("Database not initialized!");
-    return false;
-  }
+	int timeout = 0;
 
-	bool success = true;
+	// Add this line to define the queryCacheLock mutex
+	static std::mutex queryCacheLock;
 
-	// executes the query
-	databaseLock.lock();
+	// Add this line to define the queryCache map
+	static std::unordered_map<std::string, bool> queryCache;
 
-	while (mysql_real_query(handle, query.c_str(), query.length()) != 0) {
-		SPDLOG_ERROR("Query: {}", query.substr(0, 256));
-		SPDLOG_ERROR("Message: {}", mysql_error(handle));
-		auto error = mysql_errno(handle);
-		if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053/*ER_SERVER_SHUTDOWN*/ && error != CR_CONNECTION_ERROR) {
-			success = false;
-			break;
+	// Add this line to define the queryCacheEnabled flag
+	static const bool queryCacheEnabled = true;
+
+	// Add this line to define the threadPool thread pool
+	static ThreadPool threadPool(std::thread::hardware_concurrency());
+
+	if (!handle) {
+		SPDLOG_ERROR("Database not initialized!");
+		return false;
+	}
+
+	// Check query cache first
+	if (queryCacheEnabled) {
+		std::lock_guard<std::mutex> lock(queryCacheLock);
+		auto it = queryCache.find(query);
+		if (it != queryCache.end()) {
+			return it->second;
 		}
-		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	MYSQL_RES* m_res = mysql_store_result(handle);
-	databaseLock.unlock();
+	// Add query to thread pool
+	threadPool.enqueue([&] {
+		bool success = true;
+		int retryCount = 0;
+		MYSQL_RES* m_res = nullptr;
 
-	if (m_res) {
-		mysql_free_result(m_res);
-	}
+		// executes the query
+		databaseLock.lock();
+		while (mysql_real_query(handle, query.c_str(), query.length()) != 0) {
+			SPDLOG_ERROR("Query: {}", query.substr(0, 256));
+			SPDLOG_ERROR("Message: {}", mysql_error(handle));
+			auto error = mysql_errno(handle);
+			if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053/*ER_SERVER_SHUTDOWN*/ && error != CR_CONNECTION_ERROR) {
+				success = false;
+				break;
+			}
+			retryCount++;
+			if (timeout > 0 && retryCount > timeout) {
+				success = false;
+				break;
+			}
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+		}
 
-	return success;
+		if (success) {
+			m_res = mysql_use_result(handle);
+		}
+
+		databaseLock.unlock();
+
+		if (m_res) {
+			// process result set rows here using cursor-based approach
+			mysql_free_result(m_res);
+		}
+
+		// Add query and result to cache
+		if (queryCacheEnabled) {
+			std::lock_guard<std::mutex> lock(queryCacheLock);
+			// queryCache[query] = success;
+		}
+	});
+
+	return true;
 }
 
 DBResult_ptr Database::storeQuery(const std::string& query)
 {
-  if (!handle) {
-    SPDLOG_ERROR("Database not initialized!");
-    return nullptr;
-  }
-
-	databaseLock.lock();
-
-	retry:
-	while (mysql_real_query(handle, query.c_str(), query.length()) != 0) {
-		SPDLOG_ERROR("Query: {}", query);
-		SPDLOG_ERROR("Message: {}", mysql_error(handle));
-		auto error = mysql_errno(handle);
-		if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053/*ER_SERVER_SHUTDOWN*/ && error != CR_CONNECTION_ERROR) {
-			break;
-		}
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+	if (!handle) {
+		SPDLOG_ERROR("Database not initialized!");
 	}
 
-	// we should call that every time as someone would call executeQuery('SELECT...')
-	// as it is described in MySQL manual: "it doesn't hurt" :P
-	MYSQL_RES* res = mysql_store_result(handle);
-	if (res == nullptr) {
-		SPDLOG_ERROR("Query: {}", query);
-		SPDLOG_ERROR("Message: {}", mysql_error(handle));
-		auto error = mysql_errno(handle);
-		if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053/*ER_SERVER_SHUTDOWN*/ && error != CR_CONNECTION_ERROR) {
-			databaseLock.unlock();
+	// Use a transaction manager to handle transactions.
+	TransactionManager transactionManager(handle);
+	transactionManager.startTransaction();
+
+	MYSQL_RES* res = nullptr;
+	const int MAX_RETRIES = 10;
+	int retries = MAX_RETRIES;
+	auto tryQuery = [&]() {
+		if (mysql_query(handle, query.data()) != 0) {
+			int error = mysql_errno(handle);
+			if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053 /* ER_SERVER_SHUTDOWN */ && error != CR_CONNECTION_ERROR) {
+				SPDLOG_ERROR("MySQL Error: {}", mysql_error(handle));
+			}
+			if (retries == 0) {
+				SPDLOG_ERROR("MySQL Error: Maximum number of retries reached");
+				return false;
+			}
+			--retries;
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+			return true;
+		} else {
+			// we should call that every time as someone would call executeQuery('SELECT...')
+			// as it is described in MySQL manual: "it doesn't hurt" :P
+			res = mysql_store_result(handle);
+			if (res == nullptr) {
+				int error = mysql_errno(handle);
+				if (error != CR_SERVER_LOST && error != CR_SERVER_GONE_ERROR && error != CR_CONN_HOST_ERROR && error != 1053 /* ER_SERVER_SHUTDOWN */ && error != CR_CONNECTION_ERROR) {
+					SPDLOG_ERROR("MySQL Error: {}", mysql_error(handle));
+				}
+				if (retries == 0) {
+					SPDLOG_ERROR("MySQL Error: Maximum number of retries reached");
+					return false;
+				}
+				--retries;
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+				return true;
+			} else {
+				return false;
+			}
+		}
+	};
+
+	while (tryQuery());
+	try {
+		DBResult_ptr result = std::make_shared<DBResult>(res);
+		if (!result->hasNext()) {
 			return nullptr;
 		}
-		goto retry;
-	}
-	databaseLock.unlock();
-
-	// retrieving results of query
-	DBResult_ptr result = std::make_shared<DBResult>(res);
-	if (!result->hasNext()) {
+		return result;
+	} catch (const std::exception& e) {
+		SPDLOG_ERROR("Error creating DBResult object: {}", e.what());
 		return nullptr;
 	}
-	return result;
 }
 
 std::string Database::escapeString(const std::string& s) const

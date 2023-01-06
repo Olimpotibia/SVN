@@ -317,4 +317,88 @@ class DBTransactionGuard
 		DBTransaction& transaction_;
 };
 
+class TransactionManager
+{
+public:
+	explicit TransactionManager(MYSQL* handle) : m_handle(handle) {}
+
+	void startTransaction()
+	{
+		if (mysql_query(m_handle, "START TRANSACTION") != 0) {
+			throw std::runtime_error("Error starting transaction: " + std::string(mysql_error(m_handle)));
+		}
+	}
+
+	void commitTransaction()
+	{
+		if (mysql_query(m_handle, "COMMIT") != 0) {
+			throw std::runtime_error("Error committing transaction: " + std::string(mysql_error(m_handle)));
+		}
+	}
+
+	void rollbackTransaction()
+	{
+		if (mysql_query(m_handle, "ROLLBACK") != 0) {
+			throw std::runtime_error("Error rolling back transaction: " + std::string(mysql_error(m_handle)));
+		}
+	}
+
+private:
+	MYSQL* m_handle;
+};
+
+class ThreadPool {
+public:
+  explicit ThreadPool(size_t numThreads)
+    : m_stop(false)
+  {
+    for (size_t i = 0; i < numThreads; i++) {
+      m_threads.emplace_back([&] {
+        while (true) {
+          std::function<void()> task;
+          {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_condition.wait(lock, [&] { return m_stop || !m_tasks.empty(); });
+            if (m_stop && m_tasks.empty()) {
+              return;
+            }
+            task = std::move(m_tasks.front());
+            m_tasks.pop();
+          }
+          task();
+        }
+      });
+    }
+  }
+
+  ~ThreadPool()
+  {
+    {
+      std::unique_lock<std::mutex> lock(m_mutex);
+      m_stop = true;
+    }
+    m_condition.notify_all();
+    for (auto& thread : m_threads) {
+      thread.join();
+    }
+  }
+
+  template<typename F>
+  void enqueue(F&& task)
+  {
+    {
+      std::unique_lock<std::mutex> lock(m_mutex);
+      m_tasks.emplace(std::forward<F>(task));
+    }
+    m_condition.notify_one();
+  }
+
+private:
+  std::vector<std::thread> m_threads;
+  std::queue<std::function<void()>> m_tasks;
+  std::mutex m_mutex;
+  std::condition_variable m_condition;
+  bool m_stop;
+};
+
 #endif  // SRC_DATABASE_DATABASE_H_
