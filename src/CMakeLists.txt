@@ -190,6 +190,7 @@ PRIVATE
 	game/scheduling/tasks.cpp
 	io/fileloader.cpp
 	io/iobestiary.cpp
+	io/io_bosstiary.cpp
 	io/ioguild.cpp
 	io/iologindata.cpp
 	io/functions/iologindata_load_player.cpp
@@ -313,7 +314,6 @@ if (MSVC)
 	if(BUILD_STATIC_LIBRARY)
 		log_option_enabled("STATIC_LIBRARY")
 		set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-		find_package(unofficial-libmariadb CONFIG REQUIRED)
 		set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 		target_link_libraries(${PROJECT_NAME}	PRIVATE jsoncpp_static)
 	else()

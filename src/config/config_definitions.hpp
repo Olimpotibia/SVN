@@ -5,7 +5,7 @@
  * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
  * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
  * Website: https://docs.opentibiabr.org/
-*/
+ */
 
 #ifndef SRC_CONFIG_CONFIG_DEFINITIONS_HPP_
 #define SRC_CONFIG_CONFIG_DEFINITIONS_HPP_
@@ -68,9 +68,10 @@ enum booleanConfig_t {
 	HAZARDSYSTEM_ENABLED,
 	USE_ANY_DATAPACK_FOLDER,
 	ALLOW_RELOAD,
+	BOOSTED_BOSS_SLOT,
 
 	LAST_BOOLEAN_CONFIG
-	};
+};
 
 enum stringConfig_t {
 	MAP_NAME,
@@ -103,7 +104,7 @@ enum stringConfig_t {
 	FORGE_FIENDISH_INTERVAL_TIME,
 
 	LAST_STRING_CONFIG
-	};
+};
 
 enum integerConfig_t {
 	SQL_PORT,
@@ -199,6 +200,8 @@ enum integerConfig_t {
 	FORGE_MAX_SLIVERS,
 	FORGE_INFLUENCED_CREATURES_LIMIT,
 	FORGE_FIENDISH_CREATURES_LIMIT,
+	BOOSTED_BOSS_LOOT_BONUS,
+	BOOSTED_BOSS_KILL_BONUS,
 
 	LAST_INTEGER_CONFIG
 };
@@ -227,4 +230,4 @@ enum floatingConfig_t {
 	LAST_FLOATING_CONFIG
 };
 
-#endif  // SRC_CONFIG_CONFIG_DEFINITIONS_HPP_
+#endif // SRC_CONFIG_CONFIG_DEFINITIONS_HPP_
