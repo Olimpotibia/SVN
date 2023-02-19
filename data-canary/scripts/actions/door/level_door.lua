@@ -26,7 +26,7 @@ function levelDoor.onUse(player, item, fromPosition, target, toPosition, isHotke
 		end
 	end
 
-	if Creature.checkCreatureInsideDoor(player, toPosition) then
+	if Creature.isInsideDoor(player, toPosition) then
 		return true
 	end
 	return true

@@ -5,7 +5,7 @@
  * License: https://github.com/opentibiabr/canary/blob/main/LICENSE
  * Contributors: https://github.com/opentibiabr/canary/graphs/contributors
  * Website: https://docs.opentibiabr.org/
- */
+*/
 
 #include "pch.hpp"
 
@@ -18,10 +18,11 @@
 Spells::Spells() = default;
 Spells::~Spells() = default;
 
-TalkActionResult_t Spells::playerSaySpell(Player* player, std::string &words) {
+TalkActionResult_t Spells::playerSaySpell(Player* player, std::string& words)
+{
 	std::string str_words = words;
 
-	// strip trailing spaces
+	//strip trailing spaces
 	trimString(str_words);
 
 	InstantSpell* instantSpell = getInstantSpell(str_words);
@@ -71,35 +72,38 @@ TalkActionResult_t Spells::playerSaySpell(Player* player, std::string &words) {
 	return TALKACTION_FAILED;
 }
 
-void Spells::clear() {
+void Spells::clear()
+{
 	instants.clear();
 	runes.clear();
 }
 
-bool Spells::hasInstantSpell(const std::string &word) const {
+bool Spells::hasInstantSpell(const std::string& word) const
+{
 	if (auto iterate = instants.find(word);
-		iterate != instants.end()) {
+	iterate != instants.end())
+	{
 		return true;
 	}
 	return false;
 }
 
-bool Spells::registerInstantLuaEvent(InstantSpell* event) {
+bool Spells::registerInstantLuaEvent(InstantSpell* event)
+{
 	InstantSpell_ptr instant { event };
 	if (instant) {
 		// If the spell not have the "spell:words()" return a error message
-		const std::string &instantName = instant->getName();
+		const std::string& instantName = instant->getName();
 		if (instant->getWordsMap().empty()) {
 			SPDLOG_ERROR("[Spells::registerInstantLuaEvent] - Missing register words for spell with name {}", instantName);
 			return false;
 		}
 
-		const std::string &words = instant->getWords();
+		const std::string& words = instant->getWords();
 		// Checks if there is any spell registered with the same name
 		if (hasInstantSpell(words)) {
 			SPDLOG_WARN("[Spells::registerInstantLuaEvent] - "
-						"Duplicate registered instant spell with words: {}, on spell with name: {}",
-						words, instantName);
+                        "Duplicate registered instant spell with words: {}, on spell with name: {}", words, instantName);
 			return false;
 		}
 		// Register spell word in the map
@@ -109,7 +113,8 @@ bool Spells::registerInstantLuaEvent(InstantSpell* event) {
 	return false;
 }
 
-bool Spells::registerRuneLuaEvent(RuneSpell* event) {
+bool Spells::registerRuneLuaEvent(RuneSpell* event)
+{
 	RuneSpell_ptr rune { event };
 	if (rune) {
 		uint16_t id = rune->getRuneItemId();
@@ -128,17 +133,19 @@ bool Spells::registerRuneLuaEvent(RuneSpell* event) {
 	return false;
 }
 
-std::list<uint16_t> Spells::getSpellsByVocation(uint16_t vocationId) {
+std::list<uint16_t> Spells::getSpellsByVocation(uint16_t vocationId)
+{
 	std::list<uint16_t> spellsList;
 	VocSpellMap vocSpells;
 	std::map<uint16_t, bool>::const_iterator vocSpellsIt;
 
-	for (const auto &it : instants) {
+	for (const auto& it : instants) {
 		vocSpells = it.second.getVocMap();
 		vocSpellsIt = vocSpells.find(vocationId);
 
 		if (vocSpellsIt != vocSpells.end()
-			&& vocSpellsIt->second) {
+				&& vocSpellsIt->second)
+		{
 			spellsList.push_back(it.second.getId());
 		}
 	}
@@ -146,7 +153,8 @@ std::list<uint16_t> Spells::getSpellsByVocation(uint16_t vocationId) {
 	return spellsList;
 }
 
-Spell* Spells::getSpellByName(const std::string &name) {
+Spell* Spells::getSpellByName(const std::string& name)
+{
 	Spell* spell = getRuneSpellByName(name);
 	if (!spell) {
 		spell = getInstantSpellByName(name);
@@ -154,10 +162,11 @@ Spell* Spells::getSpellByName(const std::string &name) {
 	return spell;
 }
 
-RuneSpell* Spells::getRuneSpell(uint32_t id) {
+RuneSpell* Spells::getRuneSpell(uint32_t id)
+{
 	auto it = runes.find(id);
 	if (it == runes.end()) {
-		for (auto &rune : runes) {
+		for (auto& rune : runes) {
 			if (rune.second.getId() == id) {
 				return &rune.second;
 			}
@@ -167,8 +176,9 @@ RuneSpell* Spells::getRuneSpell(uint32_t id) {
 	return &it->second;
 }
 
-RuneSpell* Spells::getRuneSpellByName(const std::string &name) {
-	for (auto &it : runes) {
+RuneSpell* Spells::getRuneSpellByName(const std::string& name)
+{
+	for (auto& it : runes) {
 		if (strcasecmp(it.second.getName().c_str(), name.c_str()) == 0) {
 			return &it.second;
 		}
@@ -176,11 +186,12 @@ RuneSpell* Spells::getRuneSpellByName(const std::string &name) {
 	return nullptr;
 }
 
-InstantSpell* Spells::getInstantSpell(const std::string &words) {
+InstantSpell* Spells::getInstantSpell(const std::string& words)
+{
 	InstantSpell* result = nullptr;
 
-	for (auto &it : instants) {
-		const std::string &instantSpellWords = it.second.getWords();
+	for (auto& it : instants) {
+		const std::string& instantSpellWords = it.second.getWords();
 		size_t spellLen = instantSpellWords.length();
 		if (strncasecmp(instantSpellWords.c_str(), words.c_str(), spellLen) == 0) {
 			if (!result || spellLen > result->getWords().length()) {
@@ -193,7 +204,7 @@ InstantSpell* Spells::getInstantSpell(const std::string &words) {
 	}
 
 	if (result) {
-		const std::string &resultWords = result->getWords();
+		const std::string& resultWords = result->getWords();
 		if (words.length() > resultWords.length()) {
 			if (!result->getHasParam()) {
 				return nullptr;
@@ -210,8 +221,9 @@ InstantSpell* Spells::getInstantSpell(const std::string &words) {
 	return nullptr;
 }
 
-InstantSpell* Spells::getInstantSpellById(uint32_t spellId) {
-	for (auto &it : instants) {
+InstantSpell* Spells::getInstantSpellById(uint32_t spellId)
+{
+	for (auto& it : instants) {
 		if (it.second.getId() == spellId) {
 			return &it.second;
 		}
@@ -219,8 +231,9 @@ InstantSpell* Spells::getInstantSpellById(uint32_t spellId) {
 	return nullptr;
 }
 
-InstantSpell* Spells::getInstantSpellByName(const std::string &name) {
-	for (auto &it : instants) {
+InstantSpell* Spells::getInstantSpellByName(const std::string& name)
+{
+	for (auto& it : instants) {
 		if (strcasecmp(it.second.getName().c_str(), name.c_str()) == 0) {
 			return &it.second;
 		}
@@ -228,7 +241,8 @@ InstantSpell* Spells::getInstantSpellByName(const std::string &name) {
 	return nullptr;
 }
 
-Position Spells::getCasterPosition(Creature* creature, Direction dir) {
+Position Spells::getCasterPosition(Creature* creature, Direction dir)
+{
 	return getNextPosition(dir, creature->getPosition());
 }
 
@@ -236,16 +250,19 @@ CombatSpell::CombatSpell(Combat* newCombat, bool newNeedTarget, bool newNeedDire
 	Script(&g_spells().getScriptInterface()),
 	combat(newCombat),
 	needDirection(newNeedDirection),
-	needTarget(newNeedTarget) {
-	// Empty
+	needTarget(newNeedTarget)
+{
+// Empty
 }
 
-bool CombatSpell::loadScriptCombat() {
+bool CombatSpell::loadScriptCombat()
+{
 	combat = g_luaEnvironment.getCombatObject(g_luaEnvironment.lastCombatId).get();
 	return combat != nullptr;
 }
 
-bool CombatSpell::castSpell(Creature* creature) {
+bool CombatSpell::castSpell(Creature* creature)
+{
 	if (isLoadedCallback()) {
 		LuaVariant var;
 		var.type = VARIANT_POSITION;
@@ -270,7 +287,8 @@ bool CombatSpell::castSpell(Creature* creature) {
 	return true;
 }
 
-bool CombatSpell::castSpell(Creature* creature, Creature* target) {
+bool CombatSpell::castSpell(Creature* creature, Creature* target)
+{
 	if (isLoadedCallback()) {
 		LuaVariant var;
 
@@ -304,12 +322,13 @@ bool CombatSpell::castSpell(Creature* creature, Creature* target) {
 	return true;
 }
 
-bool CombatSpell::executeCastSpell(Creature* creature, const LuaVariant &var) const {
-	// onCastSpell(creature, var)
+bool CombatSpell::executeCastSpell(Creature* creature, const LuaVariant& var) const
+{
+	//onCastSpell(creature, var)
 	if (!getScriptInterface()->reserveScriptEnv()) {
 		SPDLOG_ERROR("[CombatSpell::executeCastSpell - Creature {}] "
-					 "Call stack overflow. Too many lua script calls being nested.",
-					 creature->getName());
+                     "Call stack overflow. Too many lua script calls being nested.",
+                     creature->getName());
 		return false;
 	}
 
@@ -328,7 +347,8 @@ bool CombatSpell::executeCastSpell(Creature* creature, const LuaVariant &var) co
 	return getScriptInterface()->callFunction(2);
 }
 
-bool Spell::playerSpellCheck(Player* player) const {
+bool Spell::playerSpellCheck(Player* player) const
+{
 	if (player->hasFlag(PlayerFlags_t::CannotUseSpells)) {
 		return false;
 	}
@@ -427,12 +447,13 @@ bool Spell::playerSpellCheck(Player* player) const {
 	return true;
 }
 
-bool Spell::playerInstantSpellCheck(Player* player, const Position &toPos) {
+bool Spell::playerInstantSpellCheck(Player* player, const Position& toPos)
+{
 	if (toPos.x == 0xFFFF) {
 		return true;
 	}
 
-	const Position &playerPos = player->getPosition();
+	const Position& playerPos = player->getPosition();
 	if (playerPos.z > toPos.z) {
 		player->sendCancelMessage(RETURNVALUE_FIRSTGOUPSTAIRS);
 		g_game().addMagicEffect(player->getPosition(), CONST_ME_POFF);
@@ -471,7 +492,8 @@ bool Spell::playerInstantSpellCheck(Player* player, const Position &toPos) {
 	return true;
 }
 
-bool Spell::playerRuneSpellCheck(Player* player, const Position &toPos) {
+bool Spell::playerRuneSpellCheck(Player* player, const Position& toPos)
+{
 	if (!playerSpellCheck(player)) {
 		return false;
 	}
@@ -480,7 +502,7 @@ bool Spell::playerRuneSpellCheck(Player* player, const Position &toPos) {
 		return true;
 	}
 
-	const Position &playerPos = player->getPosition();
+	const Position& playerPos = player->getPosition();
 	if (playerPos.z > toPos.z) {
 		player->sendCancelMessage(RETURNVALUE_FIRSTGOUPSTAIRS);
 		g_game().addMagicEffect(player->getPosition(), CONST_ME_POFF);
@@ -539,24 +561,46 @@ bool Spell::playerRuneSpellCheck(Player* player, const Position &toPos) {
 	return true;
 }
 
-void Spell::applyCooldownConditions(Player* player) const {
+void Spell::applyCooldownConditions(Player* player) const
+{
+	WheelOfDestinySpellGrade_t spellGrade = player->getWheelOfDestinySpellUpgrade(getName());
+	bool isUpgraded = getWheelOfDestinyUpgraded() && spellGrade > 0;
 	if (cooldown > 0) {
-		Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLCOOLDOWN, cooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, spellId);
-		player->addCondition(condition);
+		int32_t spellCooldown = cooldown;
+		if (isUpgraded) {
+			spellCooldown -= getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_COOLDOWN, spellGrade);
+		}
+		if (spellCooldown > 0) {
+			Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLCOOLDOWN, spellCooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, spellId);
+			player->addCondition(condition);
+		}
 	}
 
 	if (groupCooldown > 0) {
-		Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLGROUPCOOLDOWN, groupCooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, group);
-		player->addCondition(condition);
+		int32_t spellGroupCooldown = groupCooldown;
+		if (isUpgraded) {
+			spellGroupCooldown -= getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_GROUP_COOLDOWN, spellGrade);
+		}
+		if (spellGroupCooldown > 0) {
+			Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLGROUPCOOLDOWN, spellGroupCooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, group);
+			player->addCondition(condition);
+		}
 	}
 
 	if (secondaryGroupCooldown > 0) {
-		Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLGROUPCOOLDOWN, secondaryGroupCooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, secondaryGroup);
-		player->addCondition(condition);
+		int32_t spellSecondaryGroupCooldown = secondaryGroupCooldown;
+		if (isUpgraded) {
+			spellSecondaryGroupCooldown -= getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_SECONDARY_GROUP_COOLDOWN, spellGrade);
+		}
+		if (spellSecondaryGroupCooldown > 0) {
+			Condition* condition = Condition::createCondition(CONDITIONID_DEFAULT, CONDITION_SPELLGROUPCOOLDOWN, spellSecondaryGroupCooldown / g_configManager().getFloat(RATE_SPELL_COOLDOWN), 0, false, secondaryGroup);
+			player->addCondition(condition);
+		}
 	}
 }
 
-void Spell::postCastSpell(Player* player, bool finishedCast /*= true*/, bool payCost /*= true*/) const {
+void Spell::postCastSpell(Player* player, bool finishedCast /*= true*/, bool payCost /*= true*/) const
+{
 	if (finishedCast) {
 		if (!player->hasFlag(PlayerFlags_t::HasNoExhaustion)) {
 			applyCooldownConditions(player);
@@ -572,7 +616,8 @@ void Spell::postCastSpell(Player* player, bool finishedCast /*= true*/, bool pay
 	}
 }
 
-void Spell::postCastSpell(Player* player, uint32_t manaCost, uint32_t soulCost) {
+void Spell::postCastSpell(Player* player, uint32_t manaCost, uint32_t soulCost)
+{
 	if (manaCost > 0) {
 		player->addManaSpent(manaCost);
 		player->changeMana(-static_cast<int32_t>(manaCost));
@@ -585,26 +630,45 @@ void Spell::postCastSpell(Player* player, uint32_t manaCost, uint32_t soulCost) 
 	}
 }
 
-uint32_t Spell::getManaCost(const Player* player) const {
+uint32_t Spell::getManaCost(const Player* player) const
+{
 	if (mana != 0) {
+		WheelOfDestinySpellGrade_t spellGrade = player->getWheelOfDestinySpellUpgrade(getName());
+		if (getWheelOfDestinyUpgraded() && spellGrade > 0) {
+			if (getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_MANA, spellGrade) >= mana) {
+				return 0;
+			} else {
+				return (mana - getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_MANA, spellGrade));
+			}
+		}
 		return mana;
 	}
 
 	if (manaPercent != 0) {
 		uint32_t maxMana = player->getMaxMana();
 		uint32_t manaCost = (maxMana * manaPercent) / 100;
+		WheelOfDestinySpellGrade_t spellGrade = player->getWheelOfDestinySpellUpgrade(getName());
+		if (getWheelOfDestinyUpgraded() && spellGrade > 0) {
+			if (getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_MANA, spellGrade) >= manaCost) {
+				return 0;
+			} else {
+				return (manaCost - getWheelOfDestinyBoost(WHEEL_OF_DESTINY_SPELL_BOOST_MANA, spellGrade));
+			}
+		}
 		return manaCost;
 	}
 
 	return 0;
 }
 
-bool InstantSpell::playerCastInstant(Player* player, std::string &param) {
+bool InstantSpell::playerCastInstant(Player* player, std::string& param)
+{
 	if (!playerSpellCheck(player)) {
 		return false;
 	}
 
 	LuaVariant var;
+	var.instantName = getName();
 	Player* playerTarget = nullptr;
 
 	if (selfTarget) {
@@ -719,17 +783,22 @@ bool InstantSpell::playerCastInstant(Player* player, std::string &param) {
 	return result;
 }
 
-bool InstantSpell::canThrowSpell(const Creature* creature, const Creature* target) const {
-	const Position &fromPos = creature->getPosition();
-	const Position &toPos = target->getPosition();
-	if (fromPos.z != toPos.z || (range == -1 && !g_game().canThrowObjectTo(fromPos, toPos, checkLineOfSight)) || (range != -1 && !g_game().canThrowObjectTo(fromPos, toPos, checkLineOfSight, range, range))) {
+bool InstantSpell::canThrowSpell(const Creature* creature, const Creature* target) const
+{
+	const Position& fromPos = creature->getPosition();
+	const Position& toPos = target->getPosition();
+	if (fromPos.z != toPos.z ||
+            (range == -1 && !g_game().canThrowObjectTo(fromPos, toPos, checkLineOfSight)) ||
+            (range != -1 && !g_game().canThrowObjectTo(fromPos, toPos, checkLineOfSight, range, range))) {
 		return false;
 	}
 	return true;
 }
 
-bool InstantSpell::castSpell(Creature* creature) {
+bool InstantSpell::castSpell(Creature* creature)
+{
 	LuaVariant var;
+	var.instantName = getName();
 
 	if (casterTargetOrDirection) {
 		Creature* target = creature->getAttackedCreature();
@@ -740,6 +809,7 @@ bool InstantSpell::castSpell(Creature* creature) {
 
 			var.type = VARIANT_NUMBER;
 			var.number = target->getID();
+			var.instantName = getName();
 			return executeCastSpell(creature, var);
 		}
 
@@ -755,7 +825,8 @@ bool InstantSpell::castSpell(Creature* creature) {
 	return executeCastSpell(creature, var);
 }
 
-bool InstantSpell::castSpell(Creature* creature, Creature* target) {
+bool InstantSpell::castSpell(Creature* creature, Creature* target)
+{
 	if (needTarget) {
 		LuaVariant var;
 		var.type = VARIANT_NUMBER;
@@ -766,12 +837,13 @@ bool InstantSpell::castSpell(Creature* creature, Creature* target) {
 	}
 }
 
-bool InstantSpell::executeCastSpell(Creature* creature, const LuaVariant &var) const {
-	// onCastSpell(creature, var)
+bool InstantSpell::executeCastSpell(Creature* creature, const LuaVariant& var) const
+{
+	//onCastSpell(creature, var)
 	if (!getScriptInterface()->reserveScriptEnv()) {
 		SPDLOG_ERROR("[InstantSpell::executeCastSpell - Creature {} words {}] "
-					 "Call stack overflow. Too many lua script calls being nested.",
-					 creature->getName(), getWords());
+                     "Call stack overflow. Too many lua script calls being nested.",
+                     creature->getName(), getWords());
 		return false;
 	}
 
@@ -790,7 +862,8 @@ bool InstantSpell::executeCastSpell(Creature* creature, const LuaVariant &var) c
 	return getScriptInterface()->callFunction(2);
 }
 
-bool InstantSpell::canCast(const Player* player) const {
+bool InstantSpell::canCast(const Player* player) const
+{
 	if (player->hasFlag(PlayerFlags_t::CannotUseSpells)) {
 		return false;
 	}
@@ -812,7 +885,8 @@ bool InstantSpell::canCast(const Player* player) const {
 	return false;
 }
 
-ReturnValue RuneSpell::canExecuteAction(const Player* player, const Position &toPos) {
+ReturnValue RuneSpell::canExecuteAction(const Player* player, const Position& toPos)
+{
 	if (player->hasFlag(PlayerFlags_t::CannotUseSpells)) {
 		return RETURNVALUE_CANNOTUSETHISOBJECT;
 	}
@@ -833,7 +907,8 @@ ReturnValue RuneSpell::canExecuteAction(const Player* player, const Position &to
 	return RETURNVALUE_NOERROR;
 }
 
-bool RuneSpell::executeUse(Player* player, Item* item, const Position &, Thing* target, const Position &toPosition, bool isHotkey) {
+bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* target, const Position& toPosition, bool isHotkey)
+{
 	if (!playerRuneSpellCheck(player, toPosition)) {
 		return false;
 	}
@@ -844,7 +919,8 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position &, Thing* 
 	}
 
 	LuaVariant var;
-
+	var.runeName = getName();
+	
 	if (needTarget) {
 		var.type = VARIANT_NUMBER;
 
@@ -883,21 +959,26 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position &, Thing* 
 	return true;
 }
 
-bool RuneSpell::castSpell(Creature* creature) {
+bool RuneSpell::castSpell(Creature* creature)
+{
 	LuaVariant var;
 	var.type = VARIANT_NUMBER;
 	var.number = creature->getID();
+	var.runeName = getName();
 	return internalCastSpell(creature, var, false);
 }
 
-bool RuneSpell::castSpell(Creature* creature, Creature* target) {
+bool RuneSpell::castSpell(Creature* creature, Creature* target)
+{
 	LuaVariant var;
 	var.type = VARIANT_NUMBER;
 	var.number = target->getID();
+	var.runeName = getName();
 	return internalCastSpell(creature, var, false);
 }
 
-bool RuneSpell::internalCastSpell(Creature* creature, const LuaVariant &var, bool isHotkey) {
+bool RuneSpell::internalCastSpell(Creature* creature, const LuaVariant& var, bool isHotkey)
+{
 	bool result;
 	if (isLoadedCallback()) {
 		result = executeCastSpell(creature, var, isHotkey);
@@ -907,12 +988,13 @@ bool RuneSpell::internalCastSpell(Creature* creature, const LuaVariant &var, boo
 	return result;
 }
 
-bool RuneSpell::executeCastSpell(Creature* creature, const LuaVariant &var, bool isHotkey) const {
-	// onCastSpell(creature, var, isHotkey)
+bool RuneSpell::executeCastSpell(Creature* creature, const LuaVariant& var, bool isHotkey) const
+{
+	//onCastSpell(creature, var, isHotkey)
 	if (!getScriptInterface()->reserveScriptEnv()) {
 		SPDLOG_ERROR("[RuneSpell::executeCastSpell - Creature {} runeId {}] "
-					 "Call stack overflow. Too many lua script calls being nested.",
-					 creature->getName(), getRuneItemId());
+                     "Call stack overflow. Too many lua script calls being nested.",
+                     creature->getName(), getRuneItemId());
 		return false;
 	}
 

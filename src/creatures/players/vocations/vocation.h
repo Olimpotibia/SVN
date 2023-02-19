@@ -100,6 +100,10 @@ class Vocation {
 		float distDamageMultiplier = 1.0f;
 		float defenseMultiplier = 1.0f;
 		float armorMultiplier = 1.0f;
+		
+		float mitigationFactor = 1.0f;
+		float mitigationPrimaryShield = 1.0f;
+		float mitigationSecondaryShield = 1.0f;
 
 	private:
 		friend class Vocations;

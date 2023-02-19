@@ -9,6 +9,15 @@
 	<module type="recvbyte" byte="252" script="gamestore/gamestore.lua"/>
 	<module type="recvbyte" byte="253" script="gamestore/gamestore.lua"/>
 	<module type="recvbyte" byte="254" script="gamestore/gamestore.lua"/>
+	
+	<!-- Bosstiary and boss slots -->
+    <module type="recvbyte" byte="176" script="bosstiary/bosstiary.lua"/>
+    <module type="recvbyte" byte="175" script="bosstiary/bosstiary.lua"/>
+    <module type="recvbyte" byte="174" script="bosstiary/bosstiary.lua"/>
+	
+	<!-- GameStore -->
+	<module type="recvbyte" byte="97" script="wheelofdestiny/init.lua"/>
+	<module type="recvbyte" byte="98" script="wheelofdestiny/init.lua"/>
 
 	<!-- Blessings -->
 	<module type="recvbyte" byte="207" script="blessings/blessings.lua" />

@@ -156,11 +156,20 @@ function serverstartup.onStartup()
 		Spdlog.info("Events: " .. "Exp: " .. expRate .. "%, " .. "loot: " .. lootRate .. "%, " .. "Spawn: " .. spawnRate .. "%, " .. "Skill: ".. skillRate .."%")
 		end
 	end
+	
+	
+	if (BosstiarySystem.config.enabled and BosstiarySystem.boosted.id == nil) then
+        BosstiarySystem.InitializeGlobalData()
+        print(">> [Bosstiary::Initializer] - Today boosted boss: " .. BosstiarySystem.boosted.name)
+    end
 
     -- Client XP Display Mode
 	-- 0 = ignore exp rate /stage
 	-- 1 = include exp rate / stage
 	Game.setStorageValue(GlobalStorage.XpDisplayMode, 1)
+
+	-- Wheel of destiny
+	WheelOfDestinySystem.initializeGlobalData(false)
 
 	-- Hireling System
 	HirelingsInit()

@@ -226,6 +226,20 @@ function playerLogin.onLogin(player)
 		onMovementRemoveProtection(playerId, player:getPosition(), 10)
 	end
 
+	-- Bostiary data
+	player:registerEvent("HazardSystemCombat")
+    player:registerEvent("bosstiaryOnKill")
+	-- if player:getClient().version >= 1200 then
+    BosstiarySystem.InitializePlayerData(player)
+	-- end
+	
+	-- Wheel of destiny
+	if (WheelOfDestinySystem ~= nil) then
+		WheelOfDestinySystem.initializePlayerData(player) -- check folder libs have correclty
+	else
+		print("[login.onLogin::WheelOfDestinySystem]", "Lib not installed, ignoring player initialization")
+	end
+
 	-- Set Client XP Gain Rate --
 	if Game.getStorageValue(GlobalStorage.XpDisplayMode) > 0 then
 		local baseRate = player:getFinalBaseRateExperience()

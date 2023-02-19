@@ -74,7 +74,7 @@ function MonsterType.createLootItem(self, lootBlock, chance, lootTable)
 	return lootTable
 end
 
-function MonsterType.getBossReward(self, lootFactor, topScore)
+function MonsterType.getBossReward(self, lootFactor, topScore, boostedFactor)
 	local result = {}
 	if configManager.getNumber(configKeys.RATE_LOOT) > 0 then
 		local loot = self:getLoot() or {}
@@ -82,6 +82,9 @@ function MonsterType.getBossReward(self, lootFactor, topScore)
 			local lootBlock = loot[i]
 			if lootBlock then
 				if not lootBlock.unique or topScore then
+					elseif (boostedFactor ~= 1 and BosstiarySystem.IsLootBoosted(lootBlock.itemId)) then
+                    self:createLootItem(lootBlock, lootFactor * boostedFactor, result)
+				else
 					self:createLootItem(lootBlock, lootFactor, result)
 				end
 			end

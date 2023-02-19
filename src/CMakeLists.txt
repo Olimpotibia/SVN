@@ -133,20 +133,19 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE pch.hpp)
 # *****************************************************************************
 # Packages / Libs
 # *****************************************************************************
-find_package(asio CONFIG REQUIRED)
-find_package(CURL CONFIG REQUIRED)
+# find_package(asio CONFIG REQUIRED)
+# find_package(CURL CONFIG REQUIRED)
 find_package(GMP REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
 find_package(LuaJIT REQUIRED)
 find_package(MySQL REQUIRED)
-find_package(magic_enum CONFIG REQUIRED)
+# find_package(magic_enum CONFIG REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
 find_package(spdlog REQUIRED)
-find_package(unofficial-libmariadb CONFIG REQUIRED)
-find_package(mio REQUIRED)
+# find_package(unofficial-libmariadb CONFIG REQUIRED)
+# find_package(mio REQUIRED)
 find_package(Threads REQUIRED)
-find_package(ZLIB REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -213,9 +212,7 @@ PRIVATE
 	items/decay/decay.cpp
 	items/item.cpp
 	items/items.cpp
-	items/functions/item/attribute.cpp
-	items/functions/item/custom_attribute.cpp
-	items/functions/item/item_parse.cpp
+	items/functions/item_parse.cpp
 	items/thing.cpp
 	items/tile.cpp
 	items/trashholder.cpp
@@ -340,17 +337,16 @@ if (MSVC)
 			${GMP_LIBRARIES}
 			${LUAJIT_LIBRARIES}
 			${MYSQL_CLIENT_LIBS}
-			asio::asio
-			CURL::libcurl
-			fmt::fmt
-			magic_enum::magic_enum
-			mio::mio
+			# asio::asio
+			# CURL::libcurl
+			# fmt::fmt
+			# magic_enum::magic_enum
+			# mio::mio
 			protobuf::libprotobuf
-			pugixml::pugixml
+			# pugixml::pugixml
 			spdlog::spdlog
-			unofficial::libmariadb
-			unofficial::mariadbclient
-			ZLIB::ZLIB
+			# unofficial::libmariadb
+			# unofficial::mariadbclient
 	)
 
 else()
@@ -367,18 +363,17 @@ else()
 		PRIVATE
 			${LUAJIT_LIBRARIES}
 			${GMP_LIBRARIES}
-			asio::asio
-			CURL::libcurl
-			fmt::fmt
-			jsoncpp_static
-			magic_enum::magic_enum
-			mio::mio
+			# asio::asio
+			# CURL::libcurl
+			# fmt::fmt
+			# jsoncpp_static
+			# magic_enum::magic_enum
+			# mio::mio
 			protobuf::libprotobuf
-			pugixml::pugixml
+			# pugixml::pugixml
 			spdlog::spdlog
-			unofficial::libmariadb
-			unofficial::mariadbclient
-			ZLIB::ZLIB
+			# unofficial::libmariadb
+			# unofficial::mariadbclient
 
 			Threads::Threads
 	)
